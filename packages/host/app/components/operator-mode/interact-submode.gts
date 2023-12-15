@@ -10,7 +10,6 @@ import { isTesting } from '@embroider/macros';
 import { tracked } from '@glimmer/tracking';
 
 import get from 'lodash/get';
-import { isEqual } from 'lodash';
 
 import { dropTask, restartableTask, task } from 'ember-concurrency';
 import perform from 'ember-concurrency/helpers/perform';
@@ -247,8 +246,9 @@ export default class InteractSubmode extends Component<Signature> {
   }
 
   private findCardInStack(card: CardDef, stackIndex: number): StackItem {
-    let item = this.stacks[stackIndex].find((item: StackItem) =>
-      card.id ? item.card.id === card.id : isEqual(item.card, card),
+    let item = this.operatorModeStateService.findCardInStack(
+      card,
+      this.operatorModeStateService.state.stacks[stackIndex],
     );
     if (!item) {
       throw new Error(`Could not find card ${card.id} in stack ${stackIndex}`);

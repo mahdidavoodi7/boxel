@@ -1,4 +1,5 @@
 import { getOwner } from '@ember/application';
+import type Owner from '@ember/owner';
 import type RouterService from '@ember/routing/router-service';
 import { scheduleOnce } from '@ember/runloop';
 import Service, { service } from '@ember/service';
@@ -6,6 +7,7 @@ import Service, { service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 
 import { task } from 'ember-concurrency';
+import { isEqual } from 'lodash';
 import stringify from 'safe-stable-stringify';
 import { TrackedArray, TrackedMap, TrackedObject } from 'tracked-built-ins';
 
@@ -29,6 +31,8 @@ import type { CardDef } from 'https://cardstack.com/base/card-api';
 import { type Stack } from '../components/operator-mode/interact-submode';
 
 import type CardService from '../services/card-service';
+
+import { type CardResource } from '@cardstack/host/resources/card-resource';
 
 // Below types form a raw POJO representation of operator mode state.
 // This state differs from OperatorModeState in that it only contains cards that have been saved (i.e. have an ID).
@@ -88,6 +92,47 @@ export default class OperatorModeStateService extends Service {
 
   async restore(rawState: SerializedState) {
     this.state = await this.deserialize(rawState);
+  }
+
+  findCardInStack(card: CardDef, stack: StackItem[]): StackItem | undefined {
+    return stack.find((item: StackItem) =>
+      card.id ? item.card.id === card.id : isEqual(item.card, card),
+    );
+  }
+
+  openCardInInteractMode(owner: Owner, cardResource: CardResource) {
+    if (!cardResource.card) {
+      throw new Error(`cardResource "${cardResource.url}" is not a card`);
+    }
+    let { card } = cardResource;
+    let foundItem: StackItem | undefined = undefined;
+    let foundInStack = this.state.stacks.find((s: Stack) => {
+      foundItem = this.findCardInStack(card, s);
+      return foundItem;
+    });
+
+    if (foundInStack && foundItem) {
+      for (
+        let i = foundInStack.length - 1;
+        i > foundInStack.indexOf(foundItem);
+        i--
+      ) {
+        this.popItemFromStack((foundItem as StackItem).stackIndex);
+      }
+    } else {
+      let item = new StackItem({
+        format: 'isolated',
+        owner,
+        card,
+        cardResource,
+        stackIndex: 0,
+      });
+
+      this.addItemToStack(item);
+    }
+
+    this.updateCodePath(new URL(card.id));
+    this.updateSubmode('interact');
   }
 
   addItemToStack(item: StackItem) {

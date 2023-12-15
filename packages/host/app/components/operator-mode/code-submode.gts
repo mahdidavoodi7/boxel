@@ -12,6 +12,8 @@ import { cached, tracked } from '@glimmer/tracking';
 
 import { dropTask, restartableTask, timeout, all } from 'ember-concurrency';
 
+import { keyResponder, onKey } from 'ember-keyboard';
+
 import perform from 'ember-concurrency/helpers/perform';
 
 import { Accordion } from '@cardstack/boxel-ui/components';
@@ -106,6 +108,7 @@ const defaultPanelHeights: PanelHeights = {
 
 const waiter = buildWaiter('code-submode:waiter');
 
+@keyResponder
 export default class CodeSubmode extends Component<Signature> {
   @service declare cardService: CardService;
   @service declare messageService: MessageService;
@@ -178,6 +181,21 @@ export default class CodeSubmode extends Component<Signature> {
       }
       this.operatorModeStateService.unsubscribeFromOpenFileStateChanges(this);
     });
+  }
+
+  @onKey('Ctrl+i')
+  @action
+  switchToInteractMode() {
+    if (!this.card) {
+      console.warn(`no card instance is selected`);
+      this.operatorModeStateService.updateCodePath(null);
+      this.operatorModeStateService.updateSubmode('interact');
+      return;
+    }
+    this.operatorModeStateService.openCardInInteractMode(
+      this as any as Owner,
+      this.cardResource,
+    );
   }
 
   private get card() {
