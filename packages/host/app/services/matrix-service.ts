@@ -420,6 +420,11 @@ export default class MatrixService extends Service {
           this.cardAPI,
           mappings,
         );
+        let patchRelationships = generateCardPatchCallSpecification(
+          attachedOpenCard.constructor as typeof CardDef,
+          this.cardAPI,
+          mappings,
+        );
         let realmSession = getRealmSession(this, {
           card: () => attachedOpenCard,
         });
@@ -439,6 +444,7 @@ export default class MatrixService extends Service {
                   const: attachedOpenCard.id, // Force the valid card_id to be the id of the card being patched
                 },
                 attributes: patchSpec,
+                relationships: patchRelationships,
               },
               required: ['card_id', 'attributes', 'description'],
             },

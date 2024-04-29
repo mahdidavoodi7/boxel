@@ -161,13 +161,34 @@ function generatePatchCallSpecification(
 
   //
   for (let [fieldName, field] of Object.entries(fields)) {
+    if (field.fieldType == 'linksTo') {
+      let linkedField: ObjectSchema = {
+        type: 'object',
+        properties: {
+          links: {
+            type: 'object',
+            properties: {
+              self: {
+                type: 'string' || 'null',
+              },
+            },
+            required: ['self'],
+          },
+        },
+        required: ['links'],
+      };
+
+      return {
+        type: 'object',
+        properties: {
+          [fieldName]: linkedField,
+        },
+        required: [fieldName],
+      };
+    }
     // We're generating patch data, so computeds should be skipped
-    // as should any linksTo or linksToMany fields
-    if (
-      field.computeVia ||
-      field.fieldType == 'linksTo' ||
-      field.fieldType == 'linksToMany'
-    ) {
+    // Currently also skipping linksToMany fields
+    if (field.computeVia || field.fieldType == 'linksToMany') {
       continue;
     }
     const fieldSchema = generatePatchCallSpecification(
